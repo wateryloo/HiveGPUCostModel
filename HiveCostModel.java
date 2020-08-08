@@ -25,6 +25,7 @@ import org.apache.calcite.rel.RelCollation;
 import org.apache.calcite.rel.RelDistribution;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
+import org.apache.hadoop.hive.ql.optimizer.calcite.cost.HiveDefaultCostModel.DefaultJoinAlgorithm;
 import org.apache.hadoop.hive.ql.optimizer.calcite.reloperators.HiveAggregate;
 import org.apache.hadoop.hive.ql.optimizer.calcite.reloperators.HiveJoin;
 import org.apache.hadoop.hive.ql.optimizer.calcite.reloperators.HiveTableScan;
@@ -109,8 +110,19 @@ public abstract class HiveCostModel {
     return 0.0;
   }
 
-  public static double getCgather() {
-    return 0.0;
+  /**
+   * TODO: It only implements non-sequential, and R_in, R_out and L have equal cardinality.
+   *
+   * @param relNode The operator which contains a gather primitive.
+   * @param mq      The metadata.
+   * @return The value of gather primitive cost.
+   */
+  public static double getCgather(RelNode relNode, RelMetadataQuery mq) {
+    double rIn = mq.getRowCount(relNode);
+    double rOut = mq.getRowCount(relNode);
+    double lCardinality = mq.getRowCount(relNode);
+    double cost = (rOut + lCardinality) / B_H + rIn * BLOCK_SIZE / B_L;
+    return cost;
   }
 
   public static double getCreduce() {
@@ -167,6 +179,12 @@ public abstract class HiveCostModel {
 
   public abstract RelOptCost getScanCost(HiveTableScan ts, RelMetadataQuery mq);
 
+  /**
+   * TODO: The select join algorithm is always DefaultJoinAlgorithm.
+   *
+   * @param join The join operator.
+   * @return The min cost of {@code join}.
+   */
   public RelOptCost getJoinCost(HiveJoin join) {
     // Select algorithm with min cost
     JoinAlgorithm joinAlgorithm = null;
@@ -177,6 +195,11 @@ public abstract class HiveCostModel {
     }
 
     for (JoinAlgorithm possibleAlgorithm : this.joinAlgorithms) {
+
+      if (possibleAlgorithm instanceof DefaultJoinAlgorithm) {
+        continue;
+      }
+
       if (!possibleAlgorithm.isExecutable(join)) {
         continue;
       }
@@ -194,7 +217,8 @@ public abstract class HiveCostModel {
       LOG.trace(joinAlgorithm + " selected");
     }
 
-    join.setJoinAlgorithm(joinAlgorithm);
+//    join.setJoinAlgorithm(joinAlgorithm);
+    join.setJoinAlgorithm(DefaultJoinAlgorithm.INSTANCE);
     join.setJoinCost(minJoinCost);
 
     return minJoinCost;

@@ -75,11 +75,14 @@ public class HiveDefaultCostModel extends HiveCostModel {
 
   /**
    * Default join algorithm. Cost is based on cardinality.
+   * <p>
+   * This join algorithm is blocked during optimization because we do not know how to measure the
+   * cost according to the paper. However, it is the only algorithm used for implementation.
    */
   public static class DefaultJoinAlgorithm implements JoinAlgorithm {
 
     public static final JoinAlgorithm INSTANCE = new DefaultJoinAlgorithm();
-    private static final String ALGORITHM_NAME = "none";
+    private static final String ALGORITHM_NAME = "DefaultJoin";
 
 
     @Override
@@ -123,6 +126,57 @@ public class HiveDefaultCostModel extends HiveCostModel {
     @Override
     public Boolean isPhaseTransition(HiveJoin join) {
       return false;
+    }
+
+    @Override
+    public Integer getSplitCount(HiveJoin join) {
+      return 1;
+    }
+  }
+
+  public static class NonIndexNestedLoopJoinAlgorithm implements JoinAlgorithm {
+
+    public static final JoinAlgorithm INSTANCE = new NonIndexNestedLoopJoinAlgorithm();
+    private static final String ALGORITHM_NAME = "NonIndexNestedLoopJoin";
+
+    @Override
+    public String toString() {
+      return ALGORITHM_NAME;
+    }
+
+    @Override
+    public boolean isExecutable(HiveJoin join) {
+      return true;
+    }
+
+    @Override
+    public RelOptCost getCost(HiveJoin join) {
+      return null;
+    }
+
+    @Override
+    public ImmutableList<RelCollation> getCollation(HiveJoin join) {
+      return ImmutableList.of();
+    }
+
+    @Override
+    public RelDistribution getDistribution(HiveJoin join) {
+      return RelDistributions.SINGLETON;
+    }
+
+    @Override
+    public Double getMemory(HiveJoin join) {
+      return null;
+    }
+
+    @Override
+    public Double getCumulativeMemoryWithinPhaseSplit(HiveJoin join) {
+      return null;
+    }
+
+    @Override
+    public Boolean isPhaseTransition(HiveJoin join) {
+      return null;
     }
 
     @Override
