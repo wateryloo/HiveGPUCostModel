@@ -17,96 +17,108 @@
  */
 package org.apache.hadoop.hive.ql.optimizer.calcite.cost;
 
-import java.util.Set;
-
 import org.apache.calcite.plan.RelOptCost;
-import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.rel.RelCollation;
 import org.apache.calcite.rel.RelDistribution;
+import org.apache.calcite.rel.RelDistributions;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.hadoop.hive.ql.optimizer.calcite.reloperators.HiveAggregate;
 import org.apache.hadoop.hive.ql.optimizer.calcite.reloperators.HiveJoin;
 import org.apache.hadoop.hive.ql.optimizer.calcite.reloperators.HiveTableScan;
 
 import com.google.common.collect.ImmutableList;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.google.common.collect.Sets;
 
 /**
- * Cost model interface.
+ * Default implementation of the cost model. Currently used by MR and Spark execution engines.
  */
-public abstract class HiveCostModel {
+public class HiveDefaultCostModel extends HiveCostModel {
 
-  private static final Logger LOG = LoggerFactory.getLogger(HiveCostModel.class);
+  private static HiveDefaultCostModel INSTANCE;
 
-  private final Set<JoinAlgorithm> joinAlgorithms;
-
-
-  public HiveCostModel(Set<JoinAlgorithm> joinAlgorithms) {
-    this.joinAlgorithms = joinAlgorithms;
+  private HiveDefaultCostModel() {
+    super(Sets.newHashSet(DefaultJoinAlgorithm.INSTANCE));
   }
 
-  public abstract RelOptCost getDefaultCost();
-
-  public abstract RelOptCost getAggregateCost(HiveAggregate aggregate);
-
-  public abstract RelOptCost getScanCost(HiveTableScan ts, RelMetadataQuery mq);
-
-  public RelOptCost getJoinCost(HiveJoin join) {
-    // Select algorithm with min cost
-    JoinAlgorithm joinAlgorithm = null;
-    RelOptCost minJoinCost = null;
-
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("Join algorithm selection for:\n" + RelOptUtil.toString(join));
+  synchronized public static HiveDefaultCostModel getCostModel() {
+    if (INSTANCE == null) {
+      INSTANCE = new HiveDefaultCostModel();
     }
 
-    for (JoinAlgorithm possibleAlgorithm : this.joinAlgorithms) {
-      if (!possibleAlgorithm.isExecutable(join)) {
-        continue;
-      }
-      RelOptCost joinCost = possibleAlgorithm.getCost(join);
-      if (LOG.isTraceEnabled()) {
-        LOG.trace(possibleAlgorithm + " cost: " + joinCost);
-      }
-      if (minJoinCost == null || joinCost.isLt(minJoinCost)) {
-        joinAlgorithm = possibleAlgorithm;
-        minJoinCost = joinCost;
-      }
-    }
+    return INSTANCE;
+  }
 
-    if (LOG.isTraceEnabled()) {
-      LOG.trace(joinAlgorithm + " selected");
-    }
+  @Override
+  public RelOptCost getDefaultCost() {
+    return HiveCost.FACTORY.makeZeroCost();
+  }
 
-    join.setJoinAlgorithm(joinAlgorithm);
-    join.setJoinCost(minJoinCost);
+  @Override
+  public RelOptCost getScanCost(HiveTableScan ts, RelMetadataQuery mq) {
+    return HiveCost.FACTORY.makeZeroCost();
+  }
 
-    return minJoinCost;
+  @Override
+  public RelOptCost getAggregateCost(HiveAggregate aggregate) {
+    return HiveCost.FACTORY.makeZeroCost();
   }
 
   /**
-   * Interface for join algorithm.
+   * Default join algorithm. Cost is based on cardinality.
    */
-  public interface JoinAlgorithm {
+  public static class DefaultJoinAlgorithm implements JoinAlgorithm {
 
-    String toString();
+    public static final JoinAlgorithm INSTANCE = new DefaultJoinAlgorithm();
+    private static final String ALGORITHM_NAME = "none";
 
-    boolean isExecutable(HiveJoin join);
 
-    RelOptCost getCost(HiveJoin join);
+    @Override
+    public String toString() {
+      return ALGORITHM_NAME;
+    }
 
-    ImmutableList<RelCollation> getCollation(HiveJoin join);
+    @Override
+    public boolean isExecutable(HiveJoin join) {
+      return true;
+    }
 
-    RelDistribution getDistribution(HiveJoin join);
+    @Override
+    public RelOptCost getCost(HiveJoin join) {
+      final RelMetadataQuery mq = join.getCluster().getMetadataQuery();
+      double leftRCount = mq.getRowCount(join.getLeft());
+      double rightRCount = mq.getRowCount(join.getRight());
+      return HiveCost.FACTORY.makeCost(leftRCount + rightRCount, 0.0, 0.0);
+    }
 
-    Double getMemory(HiveJoin join);
+    @Override
+    public ImmutableList<RelCollation> getCollation(HiveJoin join) {
+      return ImmutableList.of();
+    }
 
-    Double getCumulativeMemoryWithinPhaseSplit(HiveJoin join);
+    @Override
+    public RelDistribution getDistribution(HiveJoin join) {
+      return RelDistributions.SINGLETON;
+    }
 
-    Boolean isPhaseTransition(HiveJoin join);
+    @Override
+    public Double getMemory(HiveJoin join) {
+      return null;
+    }
 
-    Integer getSplitCount(HiveJoin join);
+    @Override
+    public Double getCumulativeMemoryWithinPhaseSplit(HiveJoin join) {
+      return null;
+    }
+
+    @Override
+    public Boolean isPhaseTransition(HiveJoin join) {
+      return false;
+    }
+
+    @Override
+    public Integer getSplitCount(HiveJoin join) {
+      return 1;
+    }
   }
 
 }

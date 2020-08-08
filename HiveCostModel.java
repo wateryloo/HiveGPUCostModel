@@ -23,6 +23,7 @@ import org.apache.calcite.plan.RelOptCost;
 import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.rel.RelCollation;
 import org.apache.calcite.rel.RelDistribution;
+import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.hadoop.hive.ql.optimizer.calcite.reloperators.HiveAggregate;
 import org.apache.hadoop.hive.ql.optimizer.calcite.reloperators.HiveJoin;
@@ -41,9 +42,78 @@ public abstract class HiveCostModel {
 
   private final Set<JoinAlgorithm> joinAlgorithms;
 
+  /**
+   * param for T_0. Non-negative.
+   */
+  private final static double T0 = 1.0;
+
+  /**
+   * param for band-width. Positive.
+   */
+  private final static double BAND_WIDTH = 1.0;
+
+  /**
+   * Memory bandwidth of coalesced access. Positive.
+   */
+  private final static double B_H = 1.0;
+
+  /**
+   * Memory bandwidth of non-coalesced access. Positive.
+   */
+  private final static double B_L = 1.0;
+
+  /**
+   * Block size of the device memory in bytes. Positive.
+   */
+  private final static int BLOCK_SIZE = 1;
 
   public HiveCostModel(Set<JoinAlgorithm> joinAlgorithms) {
     this.joinAlgorithms = joinAlgorithms;
+  }
+
+  /**
+   * @param relNode The operator to evaluate the cost to transfer data between CPU memory and GPU
+   *                memory.
+   * @param mq      The metadata.
+   * @return The value of cost. TODO: Currently, only table-scan contains this cost.
+   */
+  public static double getTmmdm(RelNode relNode, RelMetadataQuery mq) {
+    double averageRowSize = mq.getAverageRowSize(relNode);
+    double rowCount = mq.getRowCount(relNode);
+    double dataSize = averageRowSize * rowCount;
+    return HiveCostModel.T0 + dataSize / HiveCostModel.BAND_WIDTH;
+  }
+
+  /**
+   * @param relNode The operator to evaluate the cost of computation.
+   * @param mq      The metadata.
+   * @return The value of cost. TODO: Not implemented.
+   */
+  public static double getTcomputation(RelNode relNode, RelMetadataQuery mq) {
+    return 0.0;
+  }
+
+  /**
+   * @param relNode The operator to evaluate the cost of GPU memory access.
+   * @param mq      The metadata.
+   * @return The value of cost. TODO: Not implemented.
+   */
+  public static double getTmem(RelNode relNode, RelMetadataQuery mq) {
+    return 0.0;
+  }
+
+  /**
+   * @param relNode The operator which contains a map primitive.
+   * @param mq      The metadata.
+   * @return The value of map primitive cost.
+   */
+  public static double getCmap(RelNode relNode, RelMetadataQuery mq) {
+    double cardinalityOfIn = mq.getRowCount(relNode);
+
+//    I currently find no ways to compute cardinality of output relation individually.
+    double cardinalityOfOut = cardinalityOfIn;
+
+    return (cardinalityOfIn + cardinalityOfOut) / HiveCostModel.B_H;
   }
 
   public abstract RelOptCost getDefaultCost();

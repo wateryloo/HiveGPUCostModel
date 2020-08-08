@@ -68,9 +68,9 @@ public class HiveCost implements RelOptCost {
 
   // ~ Instance fields --------------------------------------------------------
 
+  final double rowCount;
   final double cpu;
   final double io;
-  final double rowCount;
 
   // ~ Constructors -----------------------------------------------------------
 
