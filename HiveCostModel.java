@@ -84,21 +84,11 @@ public abstract class HiveCostModel {
     return HiveCostModel.T0 + dataSize / HiveCostModel.BAND_WIDTH;
   }
 
-  /**
-   * @param relNode The operator to evaluate the cost of computation.
-   * @param mq      The metadata.
-   * @return The value of cost. TODO: Not implemented.
-   */
-  public static double getTcomputation(RelNode relNode, RelMetadataQuery mq) {
+  public static double getTcomputation() {
     return 0.0;
   }
 
-  /**
-   * @param relNode The operator to evaluate the cost of GPU memory access.
-   * @param mq      The metadata.
-   * @return The value of cost. TODO: Not implemented.
-   */
-  public static double getTmem(RelNode relNode, RelMetadataQuery mq) {
+  public static double getTmem() {
     return 0.0;
   }
 
@@ -107,13 +97,68 @@ public abstract class HiveCostModel {
    * @param mq      The metadata.
    * @return The value of map primitive cost.
    */
+//  TODO: Currently no way to compute cardinality of output, input used twice instead.
   public static double getCmap(RelNode relNode, RelMetadataQuery mq) {
     double cardinalityOfIn = mq.getRowCount(relNode);
-
-//    I currently find no ways to compute cardinality of output relation individually.
     double cardinalityOfOut = cardinalityOfIn;
 
     return (cardinalityOfIn + cardinalityOfOut) / HiveCostModel.B_H;
+  }
+
+  public static double getCscatter() {
+    return 0.0;
+  }
+
+  public static double getCgather() {
+    return 0.0;
+  }
+
+  public static double getCreduce() {
+    return 0.0;
+  }
+
+  public static double getCpscan() {
+    return 0.0;
+  }
+
+  public static double getCsplit() {
+    return 0.0;
+  }
+
+  public static double getCfilter() {
+    return 0.0;
+  }
+
+  public static double getCqsort() {
+    return 0.0;
+  }
+
+  public static double getCtree() {
+    return 0.0;
+  }
+
+  public static double getChash() {
+    return 0.0;
+  }
+
+  public static double getCoutput() {
+    return 0.0;
+  }
+
+  public static double getCninlj() {
+    return 0.0;
+  }
+
+  public static double getCinlj() {
+    return 0.0;
+  }
+
+  public static double getCsmj() {
+    return 0.0;
+  }
+
+  public static double getChj() {
+    return 0.0;
   }
 
   public abstract RelOptCost getDefaultCost();

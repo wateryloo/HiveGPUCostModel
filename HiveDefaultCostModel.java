@@ -53,9 +53,19 @@ public class HiveDefaultCostModel extends HiveCostModel {
     return HiveCost.FACTORY.makeZeroCost();
   }
 
+  /**
+   * @param ts The {@code HiveTableScan} to compute cost.
+   * @param mq The metadata.
+   * @return The {@code HiveCost} of the {@code HiveTableScan}.
+   */
   @Override
   public RelOptCost getScanCost(HiveTableScan ts, RelMetadataQuery mq) {
-    return HiveCost.FACTORY.makeZeroCost();
+    double rowCount = mq.getRowCount(ts);
+    double gpuCostVal = 0.0;
+    double ioCostVal = HiveCostModel.getTmmdm(ts, mq) + HiveCostModel.getCmap(ts, mq);
+    HiveCost cost = new HiveCost(rowCount, gpuCostVal, ioCostVal);
+    System.out.printf("scan cost: %s\n", cost);
+    return cost;
   }
 
   @Override
