@@ -194,19 +194,29 @@ public abstract class HiveCostModel {
       LOG.trace("Join algorithm selection for:\n" + RelOptUtil.toString(join));
     }
 
+    joinAlgorithms.forEach(joinAlgorithm1 -> {
+      System.out.printf("join algorithm: %s\n", joinAlgorithm1);
+    });
+
     for (JoinAlgorithm possibleAlgorithm : this.joinAlgorithms) {
 
+//      We do not know what is the implementation of DefaultJoinAlgorithm.
       if (possibleAlgorithm instanceof DefaultJoinAlgorithm) {
         continue;
       }
 
       if (!possibleAlgorithm.isExecutable(join)) {
+        System.out.printf("%s not executable\n", possibleAlgorithm);
         continue;
       }
       RelOptCost joinCost = possibleAlgorithm.getCost(join);
+
       if (LOG.isTraceEnabled()) {
         LOG.trace(possibleAlgorithm + " cost: " + joinCost);
       }
+
+      System.out.printf("%s cost: %s\n", possibleAlgorithm, joinCost);
+
       if (minJoinCost == null || joinCost.isLt(minJoinCost)) {
         joinAlgorithm = possibleAlgorithm;
         minJoinCost = joinCost;

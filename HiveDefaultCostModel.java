@@ -134,10 +134,163 @@ public class HiveDefaultCostModel extends HiveCostModel {
     }
   }
 
-  public static class NonIndexNestedLoopJoinAlgorithm implements JoinAlgorithm {
+  public static class NonIndexedNestedLoopJoinAlgorithm implements JoinAlgorithm {
 
-    public static final JoinAlgorithm INSTANCE = new NonIndexNestedLoopJoinAlgorithm();
-    private static final String ALGORITHM_NAME = "NonIndexNestedLoopJoin";
+    public static final JoinAlgorithm INSTANCE = new NonIndexedNestedLoopJoinAlgorithm();
+    private static final String ALGORITHM_NAME = "NonIndexedNestedLoopJoin";
+
+    @Override
+    public String toString() {
+      return ALGORITHM_NAME;
+    }
+
+    @Override
+    public boolean isExecutable(HiveJoin join) {
+      return true;
+    }
+
+    @Override
+    public RelOptCost getCost(HiveJoin join) {
+      return null;
+    }
+
+    @Override
+    public ImmutableList<RelCollation> getCollation(HiveJoin join) {
+      return ImmutableList.of();
+    }
+
+    @Override
+    public RelDistribution getDistribution(HiveJoin join) {
+      return RelDistributions.SINGLETON;
+    }
+
+    @Override
+    public Double getMemory(HiveJoin join) {
+      return null;
+    }
+
+    @Override
+    public Double getCumulativeMemoryWithinPhaseSplit(HiveJoin join) {
+      return null;
+    }
+
+    @Override
+    public Boolean isPhaseTransition(HiveJoin join) {
+      return null;
+    }
+
+    @Override
+    public Integer getSplitCount(HiveJoin join) {
+      return 1;
+    }
+  }
+
+  public static class IndexedNestedLoopJoinAlgorithm implements JoinAlgorithm {
+
+    public static final JoinAlgorithm INSTANCE = new IndexedNestedLoopJoinAlgorithm();
+    private static final String ALGORITHM_NAME = "IndexedNestedLoopJoin";
+
+    @Override
+    public String toString() {
+      return ALGORITHM_NAME;
+    }
+
+    @Override
+    public boolean isExecutable(HiveJoin join) {
+      return true;
+    }
+
+    @Override
+    public RelOptCost getCost(HiveJoin join) {
+      return null;
+    }
+
+    @Override
+    public ImmutableList<RelCollation> getCollation(HiveJoin join) {
+      return ImmutableList.of();
+    }
+
+    @Override
+    public RelDistribution getDistribution(HiveJoin join) {
+      return RelDistributions.SINGLETON;
+    }
+
+    @Override
+    public Double getMemory(HiveJoin join) {
+      return null;
+    }
+
+    @Override
+    public Double getCumulativeMemoryWithinPhaseSplit(HiveJoin join) {
+      return null;
+    }
+
+    @Override
+    public Boolean isPhaseTransition(HiveJoin join) {
+      return null;
+    }
+
+    @Override
+    public Integer getSplitCount(HiveJoin join) {
+      return 1;
+    }
+  }
+
+  public static class SortMergeJoinAlgorithm implements JoinAlgorithm {
+
+    public static final JoinAlgorithm INSTANCE = new SortMergeJoinAlgorithm();
+    private static final String ALGORITHM_NAME = "SortMergeJoin";
+
+    @Override
+    public String toString() {
+      return ALGORITHM_NAME;
+    }
+
+    @Override
+    public boolean isExecutable(HiveJoin join) {
+      return true;
+    }
+
+    @Override
+    public RelOptCost getCost(HiveJoin join) {
+      return null;
+    }
+
+    @Override
+    public ImmutableList<RelCollation> getCollation(HiveJoin join) {
+      return ImmutableList.of();
+    }
+
+    @Override
+    public RelDistribution getDistribution(HiveJoin join) {
+      return RelDistributions.SINGLETON;
+    }
+
+    @Override
+    public Double getMemory(HiveJoin join) {
+      return null;
+    }
+
+    @Override
+    public Double getCumulativeMemoryWithinPhaseSplit(HiveJoin join) {
+      return null;
+    }
+
+    @Override
+    public Boolean isPhaseTransition(HiveJoin join) {
+      return null;
+    }
+
+    @Override
+    public Integer getSplitCount(HiveJoin join) {
+      return 1;
+    }
+  }
+
+  public static class HashJoinAlgorithm implements JoinAlgorithm {
+
+    public static final JoinAlgorithm INSTANCE = new HashJoinAlgorithm();
+    private static final String ALGORITHM_NAME = "HashJoin";
 
     @Override
     public String toString() {
