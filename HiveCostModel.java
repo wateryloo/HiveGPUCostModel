@@ -66,17 +66,24 @@ public abstract class HiveCostModel {
   /**
    * Block size of the device memory in bytes. Positive.
    */
-  private final static int BLOCK_SIZE = 1;
+  private final static double BLOCK_SIZE = 1.0;
+
+  /**
+   * Chunk size. Greater than 1 because {@code M - 1} is used as denominator.
+   */
+  private final static double M = 2;
 
   public HiveCostModel(Set<JoinAlgorithm> joinAlgorithms) {
     this.joinAlgorithms = joinAlgorithms;
   }
 
   /**
+   * TODO: Currently, only table-scan contains this cost.
+   *
    * @param relNode The operator to evaluate the cost to transfer data between CPU memory and GPU
    *                memory.
    * @param mq      The metadata.
-   * @return The value of cost. TODO: Currently, only table-scan contains this cost.
+   * @return The value of cost.
    */
   public static double getTmmdm(RelNode relNode, RelMetadataQuery mq) {
     double averageRowSize = mq.getAverageRowSize(relNode);
@@ -94,11 +101,12 @@ public abstract class HiveCostModel {
   }
 
   /**
+   * TODO: Currently no way to compute cardinality of output, input used twice instead.
+   *
    * @param relNode The operator which contains a map primitive.
    * @param mq      The metadata.
    * @return The value of map primitive cost.
    */
-//  TODO: Currently no way to compute cardinality of output, input used twice instead.
   public static double getCmap(RelNode relNode, RelMetadataQuery mq) {
     double cardinalityOfIn = mq.getRowCount(relNode);
     double cardinalityOfOut = cardinalityOfIn;
@@ -106,7 +114,15 @@ public abstract class HiveCostModel {
     return (cardinalityOfIn + cardinalityOfOut) / HiveCostModel.B_H;
   }
 
-  public static double getCscatter() {
+  /**
+   * TODO: It is assumed that R_in, R_out and L have equal cardinality and no sequence.
+   *
+   * @param relNode The operator which contains a scatter primitive.
+   * @param mq      The metadata.
+   * @return The value of scatter primitive cost.
+   */
+  public static double getCscatter(RelNode relNode, RelMetadataQuery mq) {
+
     return 0.0;
   }
 
@@ -125,20 +141,56 @@ public abstract class HiveCostModel {
     return cost;
   }
 
-  public static double getCreduce() {
-    return 0.0;
+  /**
+   * @param relNode The operator which contains a reduce primitive.
+   * @param mq      The metadata.
+   * @return The value of reduce primitive cost.
+   */
+  public static double getCreduce(RelNode relNode, RelMetadataQuery mq) {
+    double rowCount = mq.getRowCount(relNode);
+    double cost = rowCount / (M - 1) * (M / B_H + 1 / B_L);
+    return cost;
   }
 
-  public static double getCpscan() {
-    return 0.0;
+  /**
+   * @param relNode The operator which contains a prefix-scan primitive.
+   * @param mq      The metadata.
+   * @return The value of prefix-scan primitive cost.
+   */
+  public static double getCpscan(RelNode relNode, RelMetadataQuery mq) {
+    double cost = 2 * getCreduce(relNode, mq);
+    return cost;
   }
 
-  public static double getCsplit() {
-    return 0.0;
+  /**
+   * TODO: Step 1 and 3 of split not implemented.
+   *
+   * @param relNode The operator which contains a split primitive.
+   * @param mq      The metadata.
+   * @return The value of split cost.
+   */
+  public static double getCsplit(RelNode relNode, RelMetadataQuery mq) {
+    double rowCount = mq.getRowCount(relNode);
+    double[] stepCosts = new double[5];
+    stepCosts[0] = rowCount / B_H;
+    stepCosts[1] = 0.0;
+    stepCosts[2] = getCpscan(relNode, mq);
+    stepCosts[3] = 0.0;
+    stepCosts[4] = getCscatter(relNode, mq);
+    double cost = 0.0;
+    for (double stepCost : stepCosts) {
+      cost += stepCost;
+    }
+    return cost;
   }
 
-  public static double getCfilter() {
-    return 0.0;
+  /**
+   * @param relNode The operator which contains a filter primitive.
+   * @param mq      The metadata.
+   * @return The value of filter cost.
+   */
+  public static double getCfilter(RelNode relNode, RelMetadataQuery mq) {
+    return getCmap(relNode, mq) + getCpscan(relNode, mq) + getCscatter(relNode, mq);
   }
 
   public static double getCqsort() {
@@ -200,7 +252,8 @@ public abstract class HiveCostModel {
 
     for (JoinAlgorithm possibleAlgorithm : this.joinAlgorithms) {
 
-//      We do not know what is the implementation of DefaultJoinAlgorithm.
+//      DefaultJoinAlgorithm is the only join used for physical plan, and because we do not
+//      what is its implementation, it is excluded from out GPU cost model.
       if (possibleAlgorithm instanceof DefaultJoinAlgorithm) {
         continue;
       }

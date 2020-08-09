@@ -21,6 +21,7 @@ import org.apache.calcite.plan.RelOptCost;
 import org.apache.calcite.rel.RelCollation;
 import org.apache.calcite.rel.RelDistribution;
 import org.apache.calcite.rel.RelDistributions;
+import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.hadoop.hive.ql.optimizer.calcite.reloperators.HiveAggregate;
 import org.apache.hadoop.hive.ql.optimizer.calcite.reloperators.HiveJoin;
@@ -151,6 +152,7 @@ public class HiveDefaultCostModel extends HiveCostModel {
 
     @Override
     public RelOptCost getCost(HiveJoin join) {
+
       return null;
     }
 
@@ -302,9 +304,24 @@ public class HiveDefaultCostModel extends HiveCostModel {
       return true;
     }
 
+    /**
+     * TODO: Currently, I find no way to compute GPU.
+     *
+     * @param join The {@code HashJoin} to compute cost.
+     * @return {@code HiveCost}.
+     */
     @Override
     public RelOptCost getCost(HiveJoin join) {
-      return null;
+      final RelMetadataQuery mq = join.getCluster().getMetadataQuery();
+      RelNode left = join.getInput(0);
+      RelNode right = join.getInput(1);
+      double rowCount = mq.getRowCount(join);
+      double gpu = 0.0;
+      double io = 0.0;
+      io += getCfilter(left, left.getCluster().getMetadataQuery());
+      io += getCfilter(right, right.getCluster().getMetadataQuery());
+      io += getCoutput();
+      return new HiveCost(rowCount, gpu, io);
     }
 
     @Override
