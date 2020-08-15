@@ -1,5 +1,5 @@
 # HiveGPUCostModel
-A demo cost model for Hive on GPU, based on *Relational Query Coprocessing on Graphics Processors*.
+A demo cost model for Hive on GPU, based on *Relational Query Coprocessing on Graphics Processors*. The current version will **NOT** be used in Hive.
 
 # How to use?
 Environment: Centos, Hive 3.1.2, Hadoop 2.7.2, Java 1.8.
